@@ -1,0 +1,17 @@
+services:
+  monitor:
+    build:
+      context: .
+      network: host
+    # Linux: use the host's existing VPN routes. VPN DNS must also resolve here.
+    network_mode: host
+    env_file: .env
+    environment:
+      STATE_FILE: /state/known_publication_ids.json
+    volumes:
+      - monitor-state:/state
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+volumes:
+  monitor-state:
