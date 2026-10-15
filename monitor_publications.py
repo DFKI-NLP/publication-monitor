@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Send new DFKI-SLT publications to the colloquium shared mailbox only."""
+"""Invite eligible SLT publication contacts and send a shared-mailbox digest."""
 import argparse
 import csv
 import fcntl
@@ -8,6 +8,7 @@ import io
 import json
 import logging
 import os
+import re
 from pathlib import Path
 import smtplib
 import ssl
@@ -16,6 +17,9 @@ from email.message import EmailMessage
 from urllib.parse import urlencode
 
 import requests
+
+from contacts import resolve_contacts
+from datetime import date
 
 MAILBOX = "colloquium-slt@dfki.de"
 INTRANET_ROOT = "https://intranet.dfki.de"
@@ -105,25 +109,93 @@ def build_body(papers):
         items.append(f'<li><a href="{link}">{title}</a> ({year})<br>{venue}</li>')
     return ("<p>New DFKI-SLT publications registered on the intranet:</p><ul>"
             + "".join(items)
-            + "</ul><p>Automated publication summary. No individual invitations were sent.</p>")
+            + "</ul>")
 
 
-def send_summary(papers):
-    # No caller-controlled recipients or sender: both header and SMTP envelope
-    # are restricted to the shared mailbox. Author addresses are never used.
+def send_email(subject, body, recipients):
+    if not recipients or any(not re.fullmatch(r"[\w.+-]+@dfki\.de", addr, re.I) for addr in recipients):
+        raise ValueError("Recipients must be intranet-resolved DFKI email addresses")
     msg = EmailMessage()
-    msg["Subject"] = f"DFKI SLT – {len(papers)} new publication(s)"
+    msg["Subject"] = subject
     msg["From"] = MAILBOX
-    msg["To"] = MAILBOX
-    msg.set_content("New DFKI-SLT publications. View the HTML part for details.")
-    msg.add_alternative(build_body(papers), subtype="html")
+    msg["Reply-To"] = MAILBOX
+    msg["To"] = ", ".join(recipients)
+    msg.set_content("DFKI SLT Colloquium. View the HTML part for details.")
+    msg.add_alternative(body, subtype="html")
     user, password = setting("SMTP_USER"), setting("SMTP_PASS")
     with smtplib.SMTP("smtp.office365.com", 587, timeout=60) as smtp:
         smtp.ehlo()
         smtp.starttls(context=ssl.create_default_context())
         smtp.ehlo()
         smtp.login(user, password)
-        smtp.send_message(msg, from_addr=MAILBOX, to_addrs=[MAILBOX])
+        smtp.send_message(msg, from_addr=MAILBOX, to_addrs=recipients)
+
+
+def is_recent(paper, months=6):
+    try:
+        year = int(float(paper.get("year") or "nan"))
+        try:
+            month = int(float(paper.get("month") or "12"))
+        except (ValueError, OverflowError):
+            month = 12
+        month = month if 1 <= month <= 12 else 12
+        published = date(year, month, 1)
+    except (ValueError, OverflowError):
+        return False
+    today = date.today()
+    year, month = divmod(today.year * 12 + today.month - 1 - months, 12)
+    return published >= date(year, month + 1, 1)
+
+
+def plan_invitations(papers):
+    # Require an explicit deployment policy; no personal UIDs in public source.
+    raw_excluded = os.getenv("EXCLUDED_UIDS")
+    if raw_excluded is None:
+        raise ValueError("Set EXCLUDED_UIDS to the excluded head/admin UIDs (or explicitly empty)")
+    excluded = {uid.strip() for uid in raw_excluded.split(",") if uid.strip()}
+    invited, skipped = {}, []
+    with requests.Session() as session:
+        session.auth = (setting("DFKI_USER"), setting("DFKI_PASS"))
+        for pubid, paper in papers.items():
+            if not is_recent(paper):
+                skipped.append((pubid, paper, "Outside the six-month invitation window or missing publication date"))
+                continue
+            contacts = resolve_contacts(session, str(pubid), paper.get("author_ou") or "", excluded)
+            if not contacts:
+                skipped.append((pubid, paper, "No eligible SLT Verwalter or author could be resolved"))
+            for name, email, note in contacts:
+                rec = invited.setdefault(email.lower(), {"name": name, "email": email, "papers": {}})
+                rec["papers"][pubid] = paper
+    return list(invited.values()), skipped
+
+
+def invitation_body(rec):
+    when = html.escape(os.getenv("COLLOQUIUM_WHEN", "Thursdays at 14:00"))
+    return (
+        f"<p>Dear {html.escape(rec['name'])},</p>"
+        "<p>Thank you for registering the following publication(s) on the DFKI intranet.</p>"
+        + build_body(rec["papers"])
+        + f"<p>As the SLT contact for this work, we would strongly encourage you to "
+        f"present it at the DFKI SLT Colloquium, which takes place on {when}. "
+        "It's a great opportunity to share your work with the group, and we would really like to have it featured.</p>"
+        "<p>Please reply with your availability and we will find a slot for you.</p>"
+        f"<p>Best regards,<br>The DFKI SLT Colloquium<br>{MAILBOX}</p>"
+    )
+
+
+def send_digest(invited, skipped, failed):
+    # Digest routing is deliberately separate from invitation recipients.
+    body = "<p>DFKI-SLT publication monitor – morning run summary.</p>"
+    for rec in invited:
+        status = "FAILED to send" if rec["email"].lower() in failed else "Invitation sent"
+        body += (f"<p>{status}: {html.escape(rec['name'])} "
+                 f"&lt;{html.escape(rec['email'])}&gt;</p>" + build_body(rec["papers"]))
+    for pubid, paper, reason in skipped:
+        body += f"<p>Skipped: {html.escape(reason)}</p>" + build_body({pubid: paper})
+    send_email(
+        f"DFKI SLT – {len(invited) - len(failed)} invitation(s), {len(skipped)} skipped, {len(failed)} failed",
+        body, [MAILBOX],
+    )
 
 
 def run(state, dry_run=False):
@@ -149,13 +221,29 @@ def run(state, dry_run=False):
         if not new:
             LOG.info("No new publications")
             return
+        invited, skipped = plan_invitations(new)
         if dry_run:
-            LOG.info("Would send %d new publication(s) only to %s", len(new), MAILBOX)
+            LOG.info("Would send %d direct invitation(s); %d publication(s) skipped; digest only to %s",
+                     len(invited), len(skipped), MAILBOX)
             return
-        send_summary(new)
-        # Never remove previously seen IDs if the intranet temporarily omits them.
-        save_state(state, known | current)
-        LOG.info("Sent %d new publication(s) to %s; state updated", len(new), MAILBOX)
+        failed = set()
+        try:
+            for rec in invited:
+                try:
+                    send_email("Invitation to present at the DFKI SLT Colloquium",
+                               invitation_body(rec), [rec["email"]])
+                except Exception as exc:
+                    failed.add(rec["email"].lower())
+                    LOG.error("Invitation failed (%s); details will be in the digest", type(exc).__name__)
+            send_digest(invited, skipped, failed)
+        finally:
+            # Preserve the original policy: after delivery starts, mark the batch
+            # handled even on failure so a later run does not re-invite people.
+            save_state(state, known | current)
+        LOG.info("Sent %d invitation(s); %d failed; digest only to %s; state updated",
+                 len(invited) - len(failed), len(failed), MAILBOX)
+        if failed:
+            raise RuntimeError("Some invitations failed; review the shared-mailbox digest")
 
 
 def main(argv=None):
@@ -168,7 +256,7 @@ def main(argv=None):
         run(args.state, args.dry_run)
     except Exception as exc:
         # SMTP/server errors can include account details: don't log raw responses.
-        LOG.error("Monitor failed (%s). Check intranet/VPN access, credentials, SMTP permissions and state directory. State is retained for retry.", type(exc).__name__)
+        LOG.error("Monitor failed (%s). Check intranet/VPN access, credentials, SMTP permissions and state directory. Check state and the digest before retrying invitations.", type(exc).__name__)
         return 1
     return 0
 

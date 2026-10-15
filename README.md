@@ -1,6 +1,18 @@
 # DFKI SLT publication monitor
 
-Checks the DFKI intranet for newly registered SLT publications and emails a summary **only to `colloquium-slt@dfki.de`**. It never emails authors or individual contacts. Both the SMTP envelope and message headers use the shared mailbox; there is no recipient configuration.
+Checks the DFKI intranet for newly registered SLT publications, **sends invitations directly to eligible publication contacts**, and sends the follow-up digest **only to `colloquium-slt@dfki.de`**. The shared mailbox is also the sender and reply-to address. No individual's address is hardcoded as an invitation or digest recipient.
+
+## Who gets invited
+
+The original selection rules are preserved:
+
+1. Consider publications from the last six months (publication year/month; a missing month is treated as December).
+2. Invite the first eligible **Verwalter** (publication manager) whose staff profile identifies SLT membership.
+3. Also invite the first eligible **SLT-tagged author** whose directory entry can be resolved, if their email differs from the manager's.
+4. Skip head/admin accounts listed in `EXCLUDED_UIDS` in either role, and skip ambiguous or unresolved contacts. Read addresses from intranet staff profiles; never construct addresses from names.
+5. Deduplicate by email and group multiple publications into one invitation per recipient.
+
+The digest reports invitations, skipped publications and delivery failures. Its SMTP envelope and To header contain only the shared mailbox, with no individual CC/BCC recipients. An author's name/address can appear in the digest body as a report of the invitation; that does not make them a digest recipient.
 
 ## Requirements
 
@@ -20,16 +32,18 @@ python3.13 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 cp .env.example .env
 chmod 600 .env
-# Edit .env locally with your credentials.
+# Edit .env locally with credentials and your excluded head/admin UIDs.
 ./monitor_publications.sh --dry-run
 ./monitor_publications.sh
 ```
 
 Use a versioned Python executable to create the environment. If that interpreter is removed during a system upgrade, recreate `.venv` and reinstall the requirements.
 
+Set `EXCLUDED_UIDS` to your deployment's comma-separated head/admin UIDs before running. Keep the existing exclusion list when migrating an installation; this repository does not publish personal staff identifiers. An explicitly empty value disables exclusions. `COLLOQUIUM_WHEN` controls the meeting time in invitations.
+
 The launcher reads `.env` as shell syntax; quote values appropriately and keep this file private. Only source a file you trust. Alternatively, export variables and invoke `.venv/bin/python monitor_publications.py` directly. Each credential also supports a `_FILE` suffix, for example `DFKI_PASS_FILE=/run/secrets/intranet_password`; set either the value or the file, not both.
 
-The default state file is `state/known_publication_ids.json`. Override it with `STATE_FILE` or `--state PATH`. On the first normal run, the monitor records current publication IDs without emailing the historical backlog. Later runs email newly seen IDs in one summary. A dry run fetches and compares publications without sending mail or modifying publication state; it may create the state directory and lock file.
+The default state file is `state/known_publication_ids.json`. Override it with `STATE_FILE` or `--state PATH`. On the first normal run, the monitor records current publication IDs without emailing the historical backlog. Later runs resolve eligible contacts for newly seen publications, send direct invitations, then send the shared-mailbox digest. A dry run fetches and compares publications without sending mail or modifying publication state; it may create the state directory and lock file.
 
 To migrate an existing installation, stop its scheduler during the switch and copy its `known_publication_ids.json` into the new state location before the first run. Do not run two installations against separate copies of the same history.
 
@@ -65,12 +79,12 @@ A VPN sidecar is possible, but there is no universal DFKI VPN container configur
 ## Reliability and privacy
 
 - A process lock prevents overlapping runs using the same state path.
-- State is replaced atomically and updated only after SMTP submission succeeds.
+- State is replaced atomically. As in the original monitor, once invitation delivery starts, the batch is marked handled even if some deliveries fail, to avoid automatically re-inviting people who already received mail.
 - Previously seen IDs remain recorded even if the intranet temporarily omits them.
-- Fetch, parse, authentication, or delivery failures return a nonzero exit status and retain pending IDs for retry.
+- Fetch/parse failures leave publication state unchanged. Invitation failures are reported in the shared-mailbox digest and return a nonzero exit status. Delivery failures require review and manual follow-up; they are not automatically retried. If the digest itself fails, review the local error log.
 - As with SMTP generally, delivery is not exactly-once: a crash after server acceptance but before saving state can cause a duplicate summary. SMTP acceptance also does not guarantee final mailbox delivery.
 - Error logs omit raw server responses and credentials. Publication titles and links appear only in the summary email, not routine logs.
-- `.env`, secret files, logs, local state and environments are excluded from Git. The Docker build context includes only the application, requirements and Dockerfile.
+- `.env`, secret files, logs, local state and environments are excluded from Git. The Docker build context includes only the application modules, requirements and Dockerfile.
 
 ## Tests
 
@@ -79,4 +93,4 @@ A VPN sidecar is possible, but there is no universal DFKI VPN container configur
 .venv/bin/python -m pip check
 ```
 
-Tests use synthetic publications and mocked SMTP/intranet connections. They cover mailbox-only delivery, HTML escaping, initial state, duplicate suppression, retries, dry runs, invalid data, secret files and overlapping processes. GitHub Actions runs these tests without credentials or intranet access. An actual deployment still needs a live dry run on the intended network and valid SMTP permissions.
+Tests use synthetic publications and mocked SMTP/intranet connections. They cover direct invitation delivery, shared-mailbox-only digest routing, Verwalter/author selection, exclusions, address deduplication, recent-publication filtering, HTML escaping, initial state, failure handling, dry runs, invalid data, secret files and overlapping processes. GitHub Actions runs these tests without credentials or intranet access. An actual deployment still needs a live dry run on the intended network and valid SMTP permissions.
