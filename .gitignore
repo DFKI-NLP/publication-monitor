@@ -12,3 +12,5 @@ secrets/
 known_publication_ids.json
 *.before-*
 drafts/
+team.csv
+team.*.csv

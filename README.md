@@ -2,6 +2,8 @@
 
 Automatically invites eligible SLT publication authors and Verwalter to the colloquium. The follow-up digest goes **only to `colloquium-slt@dfki.de`**.
 
+For discovery **without the DFKI intranet**, use the separate [public-source workflow](docs/public-sources.md): OpenAlex → local drafts → manual sending. Do not use the setup below for that workflow.
+
 ## Set up once
 
 Use a Linux machine with **Python 3.13 or 3.14**, **cron**, and **DFKI intranet access** (DFKI network or a connected VPN). Your mail account must be authorized to **send as `colloquium-slt@dfki.de`** and use SMTP authentication.

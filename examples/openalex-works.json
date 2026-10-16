@@ -1,0 +1,11 @@
+[
+  {
+    "id": "https://openalex.org/W1",
+    "title": "Example paper for an offline demonstration",
+    "publication_date": "2026-10-01",
+    "doi": null,
+    "authorships": [
+      {"author": {"id": "https://openalex.org/A1", "display_name": "Example Researcher"}}
+    ]
+  }
+]
