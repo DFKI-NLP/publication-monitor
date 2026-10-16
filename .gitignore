@@ -11,3 +11,4 @@ secrets/
 *.lock
 known_publication_ids.json
 *.before-*
+drafts/

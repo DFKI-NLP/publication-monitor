@@ -45,4 +45,3 @@ def fetch_publications(username, password):
         if not papers:
             raise ValueError("Empty publication list; preserving existing state")
         return papers
-

@@ -137,8 +137,8 @@ def plan_invitations(papers):
     return list(invited.values()), skipped
 
 
-def invitation_body(rec):
-    when = html.escape(os.getenv("COLLOQUIUM_WHEN", "Thursdays at 14:00"))
+def invitation_body(rec, when=None):
+    when = html.escape(when if when is not None else os.getenv("COLLOQUIUM_WHEN", "Thursdays at 14:00"))
     return (
         f"<p>Dear {html.escape(rec['name'])},</p>"
         "<p>Thank you for registering the following publication(s) on the DFKI intranet.</p>"

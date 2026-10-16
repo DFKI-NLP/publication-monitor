@@ -1,0 +1,15 @@
+{
+  "invitations": [
+    {
+      "name": "Example Researcher",
+      "email": "researcher@example.org",
+      "publications": [
+        {
+          "id": 1,
+          "title": "Example publication — replace with the real title and intranet ID",
+          "year": "2026"
+        }
+      ]
+    }
+  ]
+}

@@ -34,6 +34,18 @@ Setup installs dependencies, saves your settings privately, checks intranet acce
 
 Logs are in `monitor.log`. Re-running setup keeps your publication history and replaces its own schedule rather than adding a duplicate. Use only one scheduled installation.
 
+## Create invitations without sending them
+
+For a manual workflow, enter selected recipients and publications in a local JSON file using [this example](examples/invitations.json). This command works entirely offline and requires no credentials:
+
+```bash
+.venv/bin/python draft_invitations.py --input examples/invitations.json
+```
+
+It prints the recipient, subject, and email text for copying into Outlook. Replace the example data before sending anything, and send from the colloquium mailbox. The recipient list is supplied by you; this mode does not look up authors, apply exclusions, or check publication history.
+
+Add `--output drafts/session-name` to save private `.txt` and `.eml` files instead. The output directory must not already exist. Draft generation never sends mail, changes publication history, or accesses the intranet. It does not require running setup or enabling a schedule; an existing Python environment with `requirements.txt` installed is enough.
+
 ## Who gets invited?
 
 For newly registered publications from the last six months, the monitor invites the eligible SLT Verwalter and the first eligible SLT author if they differ. It reads addresses from the intranet, applies your exclusions, and avoids duplicate invitations. Publications without a year are skipped. The digest reports invitations, skips, and failures.
