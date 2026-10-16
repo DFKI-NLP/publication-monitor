@@ -98,3 +98,12 @@ A VPN sidecar is possible, but there is no universal DFKI VPN container configur
 ```
 
 Tests use synthetic publications and mocked SMTP/intranet connections. They cover direct invitation delivery, shared-mailbox-only digest routing, Verwalter/author selection, exclusions, address deduplication, recent-publication filtering, HTML escaping, initial state, failure handling, dry runs, invalid data, secret files and overlapping processes. GitHub Actions runs these tests without credentials or intranet access. An actual deployment still needs a live dry run on the intended network and valid SMTP permissions.
+
+## Code layout
+
+- `publication_export.py`: intranet export request and CSV validation, with credentials passed in by the caller.
+- `contacts.py`: intranet staff lookups and invitation recipient selection.
+- `monitor_publications.py`: orchestration, publication history, invitation and digest email delivery.
+- `setup_monitor.py`: local installation and scheduling.
+
+The export module was extracted from `monitor_publications.py` in a later refactor; it is one component of the full application.

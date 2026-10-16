@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import monitor_publications as m
 import contacts as c
+import publication_export as export
 from datetime import date
 
 
@@ -90,11 +91,14 @@ class MonitorTests(unittest.TestCase):
             fetch.assert_not_called()
 
     def test_fetch_validates_csv(self):
-        with patch.dict(os.environ, {'DFKI_USER': 'test-user', 'DFKI_PASS': 'test-only'}), patch.object(m.requests, 'Session') as session:
+        with patch.dict(os.environ, {'DFKI_USER': 'test-user', 'DFKI_PASS': 'test-only'}), patch.object(export.requests, 'Session') as session:
             response = session.return_value.__enter__.return_value.get.return_value
             response.status_code = 200
             response.text = 'id;title\n1;Test\n'
             self.assertEqual(m.fetch_publications(), {1: {'id': '1', 'title': 'Test'}})
+            client = session.return_value.__enter__.return_value
+            self.assertEqual(client.auth, ('test-user', 'test-only'))
+            client.get.assert_called_once_with(export.CSV_URL, timeout=(15, 120), allow_redirects=False)
             for invalid in ['<html>Login</html>', 'id;title\n', 'id;title\n1;A\n1;B\n', 'id;title\n1;A;extra\n', 'id;title\nbad;A\n']:
                 response.text = invalid
                 with self.assertRaises(ValueError):
