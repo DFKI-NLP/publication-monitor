@@ -76,3 +76,10 @@ class WebTests(unittest.TestCase):
         self.assertEqual(self.request('/api/draft', {'ids': ['1', '2']})[0], 400)
         self.request('/api/mark', {'ids': drafts[0]['ids'], 'invited': True})
         self.assertEqual(json.loads(self.state.read_text())['invited'], ['1'])
+
+    def test_name_suggestions_use_local_roster_and_exclusions(self):
+        self.state.with_name('staff.csv').write_text('uid,name\nexau01,Example Author\nhead01,Excluded Person\n')
+        self.state.with_name('excluded_uids.txt').write_text('head01\n')
+        status, raw = self.request('/api/staff')
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(raw)['staff'], [{'name': 'Example Author', 'email': 'exau01@dfki.de'}])

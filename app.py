@@ -36,6 +36,15 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.local_request():
             return self.reply(403, {'error': 'Local requests only.'})
+        if self.path == '/api/staff':
+            try:
+                staff = pub.load_staff(self.server.state.parent)
+                return self.reply(200, {'staff': [
+                    {'name': row['name'], 'email': row['uid'] + '@dfki.de'}
+                    for row in staff
+                ]})
+            except (ValueError, OSError) as exc:
+                return self.reply(400, {'error': str(exc)})
         if self.path == '/api/publications':
             try:
                 self.server.data, warnings = local_sources.refresh(self.server.state, self.server.data)

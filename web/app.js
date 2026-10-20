@@ -1,5 +1,5 @@
 const $ = id => document.getElementById(id);
-let papers = [], selected = new Set(), draftVersion = 0, drafts = [], activeDraft = 0;
+let papers = [], selected = new Set(), draftVersion = 0, drafts = [], activeDraft = 0, staff = [];
 function notice(text, error=false) { $('notice').textContent=text; $('notice').classList.toggle('error',error); }
 async function api(path, body) {
   const response=await fetch('/api/'+path, body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -32,6 +32,7 @@ function storeDraft() {
   for(const key of ['name','body','subject','recipients'])d[key]=$(key).value;
 }
 function showDraft() {
+  hideSuggestions();
   const d=drafts[activeDraft];
   for(const key of ['name','body','subject','recipients'])$(key).value=d?d[key]:'';
   $('draft-choice').disabled=!d;
@@ -50,12 +51,51 @@ async function draft() {
   }catch(e){notice(e.message,true);}
 }
 $('draft-choice').onchange=()=>{storeDraft();++draftVersion;activeDraft=Number($('draft-choice').value);showDraft();};
-$('name').oninput=async()=>{
+async function updateGreeting(){
   storeDraft();const d=drafts[activeDraft];if(!d)return;
   const version=++draftVersion;
   try{const result=await api('draft',{ids:d.ids,name:d.name});if(version!==draftVersion)return;d.body=result.body;$('body').value=d.body;}
   catch(e){notice(e.message,true);}
 };
+function hideSuggestions(){
+  $('name-suggestions').hidden=true;$('name').setAttribute('aria-expanded','false');
+  $('name').removeAttribute('aria-activedescendant');
+}
+function normalizeName(text){return text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase();}
+function suggestNames(){
+  const query=normalizeName($('name').value).trim();
+  const matches=query&&drafts.length?staff.filter(person=>query.split(/\s+/).every(word=>normalizeName(person.name+' '+person.email).includes(word))).slice(0,8):[];
+  const list=$('name-suggestions');list.replaceChildren();
+  matches.forEach((person,i)=>{
+    const option=document.createElement('button');option.type='button';option.role='option';option.id='colleague-'+i;option.tabIndex=-1;
+    option.textContent=person.name+' · '+person.email;
+    option.onmousedown=e=>e.preventDefault();
+    option.onclick=()=>{
+      $('name').value=person.name;$('recipients').value=person.email;
+      const d=drafts[activeDraft];d.unmatched=false;storeDraft();
+      $('unmatched').textContent='';
+      $('draft-choice').options[activeDraft].textContent=person.name+' · '+d.ids.length+' paper(s)';
+      hideSuggestions();updateGreeting();$('name').focus();
+    };
+    list.append(option);
+  });
+  list.hidden=!matches.length;$('name').setAttribute('aria-expanded',String(!!matches.length));
+  $('name').removeAttribute('aria-activedescendant');
+}
+$('name').oninput=()=>{suggestNames();updateGreeting();};
+$('name').onfocus=suggestNames;
+$('name').onblur=hideSuggestions;
+$('name').onkeydown=e=>{
+  const options=[...$('name-suggestions').children];if($('name-suggestions').hidden)return;
+  let index=options.findIndex(option=>option.id===$('name').getAttribute('aria-activedescendant'));
+  if(e.key==='Escape'){hideSuggestions();return;}
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();index=(index+(e.key==='ArrowDown'?1:-1)+options.length)%options.length;
+    options.forEach((option,i)=>option.setAttribute('aria-selected',String(i===index)));
+    $('name').setAttribute('aria-activedescendant',options[index].id);
+  }else if(e.key==='Enter'&&index>=0){e.preventDefault();options[index].click();}
+};
+api('staff').then(data=>{staff=data.staff;}).catch(e=>notice(e.message,true));
 $('search').oninput=render;$('recent').onchange=render;
 $('clear').onclick=()=>{selected.clear();render();draft();};
 $('import').onclick=()=>$('file').click();
