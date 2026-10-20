@@ -64,17 +64,19 @@ function hideSuggestions(){
 function normalizeName(text){return text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase();}
 function suggestNames(){
   const query=normalizeName($('name').value).trim();
-  const matches=query&&drafts.length?staff.filter(person=>query.split(/\s+/).every(word=>normalizeName(person.name+' '+person.email).includes(word))).slice(0,8):[];
+  const matches=query?staff.filter(person=>query.split(/\s+/).every(word=>normalizeName(person.name+' '+person.email).includes(word))).slice(0,8):[];
   const list=$('name-suggestions');list.replaceChildren();
   matches.forEach((person,i)=>{
     const option=document.createElement('button');option.type='button';option.role='option';option.id='colleague-'+i;option.tabIndex=-1;
     option.textContent=person.name+' · '+person.email;
-    option.onmousedown=e=>e.preventDefault();
+    option.onpointerdown=e=>e.preventDefault();
     option.onclick=()=>{
       $('name').value=person.name;$('recipients').value=person.email;
-      const d=drafts[activeDraft];d.unmatched=false;storeDraft();
+      const d=drafts[activeDraft];
+      if(d){d.unmatched=false;storeDraft();}
       $('unmatched').textContent='';
-      $('draft-choice').options[activeDraft].textContent=person.name+' · '+d.ids.length+' paper(s)';
+      if(d)$('draft-choice').options[activeDraft].textContent=person.name+' · '+d.ids.length+' paper(s)';
+      else notice('Colleague selected. Select a publication to prepare an invitation.');
       hideSuggestions();updateGreeting();$('name').focus();
     };
     list.append(option);
@@ -95,7 +97,7 @@ $('name').onkeydown=e=>{
     $('name').setAttribute('aria-activedescendant',options[index].id);
   }else if(e.key==='Enter'&&index>=0){e.preventDefault();options[index].click();}
 };
-api('staff').then(data=>{staff=data.staff;}).catch(e=>notice(e.message,true));
+api('staff').then(data=>{staff=data.staff;if(document.activeElement===$('name'))suggestNames();}).catch(e=>notice(e.message,true));
 $('search').oninput=render;$('recent').onchange=render;
 $('clear').onclick=()=>{selected.clear();render();draft();};
 $('import').onclick=()=>$('file').click();
