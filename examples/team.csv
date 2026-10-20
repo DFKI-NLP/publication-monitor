@@ -1,3 +1,0 @@
-name,email,openalex_id,enabled
-Example Researcher,researcher@example.org,A1,true
-Excluded Researcher,excluded@example.org,A2,false
