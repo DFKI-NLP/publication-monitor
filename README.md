@@ -1,52 +1,44 @@
 # SLT colloquium publications
 
-A small desktop tool for reviewing publications and copying invitation text into Outlook. No email sending, contact lookups, stored passwords, or scheduled jobs.
+A local webpage for reviewing publications and copying invitations into Outlook. No automatic emails or intranet lookups.
 
-## Open a CSV
+## Start
 
-Use Python 3.11 or newer with Tkinter installed. On Debian/Ubuntu, Tkinter is provided by `python3-tk`.
+Python 3.11 or newer is all you need for the web interface:
 
 ```bash
-python3 viewer.py /path/to/publications.csv
+python3 app.py
 ```
 
-You can also open `viewer.py` without a filename and click **Import CSV**.
+Your browser opens at **http://127.0.0.1:8765**. Keep the terminal running; press Ctrl+C to stop. The server listens only on your machine. Use `--port 8766` if the default port is occupied, or `--no-browser` to open the page yourself.
 
-- Publications are sorted by their intranet registration date; search by title or author.
-- Select one paper and click **Open publication** to view its intranet page in your browser. This requires DFKI intranet access; pages open only when you click.
-- The recent filter shows entries added in the last 180 days. Unknown registration dates stay visible. Missing publication years do not hide papers.
-- Select one or more papers, enter the addressee’s name, and click **Copy invitation**. Use **Copy subject** for the subject line.
-- Paste into Outlook, choose the recipient, and send manually from `colloquium-slt@dfki.de`.
-- After sending, click **Mark invited**. Copying alone does not mark anything.
+## Use
 
-Imports update `data/publications.json`, keeping your invited markers and previously imported papers. The first import establishes a baseline; later imports highlight newly added IDs. This does not infer who was invited by earlier tools. Keep the window open until you paste, since clipboard persistence depends on the desktop environment.
+1. Click **Download CSV from intranet** to download the SLT export in your browser (DFKI network/VPN and intranet sign-in required). Then click **Import CSV** and choose the publication CSV you exported manually. The file is processed and saved locally.
+2. Search by author/title or filter to entries added in the last 180 days. Click a publication title to open its intranet page in a new tab.
+3. Select one or more papers, enter a name, and review the suggested recipients and invitation. All draft fields can be edited; changing the selection or name regenerates the draft.
+4. Copy recipients, subject, and invitation into Outlook. Send manually from `colloquium-slt@dfki.de`.
+5. Click **Mark invited** after sending. **Undo invited** reverses that marker; copying alone does not mark anything.
 
-For offline recipient suggestions, put a comma-separated `staff.csv` with `uid,name` columns next to the state file in `data/`. Put excluded staff UIDs in `data/excluded_uids.txt`, one per line. These local files are ignored by Git. Restart the viewer after editing them.
+Imports update `data/publications.json`, preserving invited markers and previously imported papers. The first import establishes a baseline; later imports highlight newly added IDs. Invalid imports leave existing data intact. Dates refer to intranet registration, and unknown dates remain visible.
 
-The viewer suggests the first uniquely matched, non-excluded SLT author per paper, using `uid@dfki.de`, and deduplicates addresses across selected papers. Review or edit the addresses and use **Copy recipients**. Names must match apart from ordering, accents, case and punctuation; unmatched or ambiguous names are left for manual review. Verwalter suggestions are not available without a separate publication-to-Verwalter mapping.
+For recipient suggestions, put a comma-separated `staff.csv` with `uid,name` columns in `data/`, and excluded staff UIDs in `data/excluded_uids.txt`, one per line. These private files are ignored by Git. The viewer suggests the first uniquely matched, non-excluded SLT author per paper using `uid@dfki.de`, deduplicating addresses across papers. Unmatched names require manual review. Verwalter are not included in the publication CSV.
 
-## Optional manual download
+Your existing local state and roster work without conversion. With `--state /path/to/publications.json`, the roster and exclusions are read from that same folder.
 
-The viewer has no network access. You can export the CSV manually in your browser and import it.
+## Optional separate downloader
 
-If automated intranet access has been authorized, the separate downloader makes **one GET request**, validates the CSV, and saves it locally. It does not follow redirects, retry, look up contacts, or run on a schedule.
+The webpage never fetches from the intranet. Publication links require DFKI network/VPN access when you click them.
+
+If automated intranet access is authorized, the separate CLI can download an export with one GET, without redirects or retries:
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python download_csv.py --output data/publications.csv
-python3 viewer.py data/publications.csv
 ```
 
-The downloader prompts for your intranet username and password; neither is saved. DFKI network/VPN access is required. Downloading does not launch the viewer or update its history until you import the file.
-
-## Files
-
-- `publications.py` — CSV parsing, local storage, invitation wording.
-- `viewer.py` — offline desktop window and clipboard.
-- `download_csv.py` — optional, manually invoked CSV request.
-
-This version replaces the earlier automated discovery and invitation workflow. Earlier code remains in Git history. The original job remains disabled; this version does not install a replacement job.
+It prompts for an intranet username/password without saving either. Import the downloaded file using the webpage. No scheduled jobs are installed. The previous automated workflow remains in Git history.
 
 ## Tests
 
@@ -54,4 +46,4 @@ This version replaces the earlier automated discovery and invitation workflow. E
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Download tests use mocked responses and never contact the intranet.
+Tests use local fixtures and mocked downloads, never the intranet.

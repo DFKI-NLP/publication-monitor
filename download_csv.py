@@ -3,21 +3,12 @@
 import argparse
 import getpass
 from pathlib import Path
-from urllib.parse import urlencode
 
 import requests
 
-from publications import parse_csv, save_text
+from publications import parse_csv, save_text, EXPORT_URL as URL
 
-URL = 'https://intranet.dfki.de/research/publications/exportPublications?' + urlencode({
-    'save': '1', 'Type': '2', 's_creationdate1': '', 's_creationdate2': '',
-    's_project': '', 's_projectRL': '0', 's_approved': '-1',
-    's_bibtextype': 'all', 's_publanguage': 'all', 's_status': '-1',
-    's_authors': '', 's_title': '', 's_month': '0', 's_year': '',
-    's_RL:list': '4', 's_RL_AND': '0', 's_conference': '', 's_series_selection': '',
-    's_series': '', 's_isbn': '', 's_doi': '', 's_publisher': '', 's_url': '',
-    's_keywords': '', 's_dataset_published': '', 's_sourcecode_published': '', 'ok': 'Suchen',
-})
+
 
 
 def download(username, password, output):
@@ -45,7 +36,7 @@ def main():
     except (requests.RequestException, ValueError, OSError) as exc:
         print(f'Download failed ({type(exc).__name__}). Check access and credentials; no automatic retry.')
         return 1
-    print(f'Saved {count} publications to {args.output}. Import this file in viewer.py.')
+    print(f'Saved {count} publications to {args.output}. Import this file using the local webpage.')
     return 0
 
 

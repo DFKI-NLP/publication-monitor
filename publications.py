@@ -8,6 +8,17 @@ import re
 import unicodedata
 from pathlib import Path
 import tempfile
+from urllib.parse import urlencode
+
+EXPORT_URL = 'https://intranet.dfki.de/research/publications/exportPublications?' + urlencode({
+    'save': '1', 'Type': '2', 's_creationdate1': '', 's_creationdate2': '',
+    's_project': '', 's_projectRL': '0', 's_approved': '-1',
+    's_bibtextype': 'all', 's_publanguage': 'all', 's_status': '-1',
+    's_authors': '', 's_title': '', 's_month': '0', 's_year': '',
+    's_RL:list': '4', 's_RL_AND': '0', 's_conference': '', 's_series_selection': '',
+    's_series': '', 's_isbn': '', 's_doi': '', 's_publisher': '', 's_url': '',
+    's_keywords': '', 's_dataset_published': '', 's_sourcecode_published': '', 'ok': 'Suchen',
+})
 
 MAILBOX = 'colloquium-slt@dfki.de'
 SUBJECT = 'Invitation to present at the DFKI SLT Colloquium'
