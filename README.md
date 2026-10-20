@@ -20,6 +20,10 @@ You can also open `viewer.py` without a filename and click **Import CSV**.
 
 Imports update `data/publications.json`, keeping your invited markers and previously imported papers. The first import establishes a baseline; later imports highlight newly added IDs. This does not infer who was invited by earlier tools. Keep the window open until you paste, since clipboard persistence depends on the desktop environment.
 
+For offline recipient suggestions, put a comma-separated `staff.csv` with `uid,name` columns next to the state file in `data/`. Put excluded staff UIDs in `data/excluded_uids.txt`, one per line. These local files are ignored by Git. Restart the viewer after editing them.
+
+The viewer suggests the first uniquely matched, non-excluded SLT author per paper, using `uid@dfki.de`, and deduplicates addresses across selected papers. Review or edit the addresses and use **Copy recipients**. Names must match apart from ordering, accents, case and punctuation; unmatched or ambiguous names are left for manual review. Verwalter suggestions are not available without a separate publication-to-Verwalter mapping.
+
 ## Optional manual download
 
 The viewer has no network access. You can export the CSV manually in your browser and import it.

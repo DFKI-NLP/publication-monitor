@@ -4,11 +4,48 @@ from datetime import datetime
 import io
 import json
 import os
+import re
+import unicodedata
 from pathlib import Path
 import tempfile
 
 MAILBOX = 'colloquium-slt@dfki.de'
 SUBJECT = 'Invitation to present at the DFKI SLT Colloquium'
+
+
+def load_staff(folder):
+    path = folder / 'staff.csv'
+    if not path.exists():
+        return []
+    with path.open(encoding='utf-8-sig', newline='') as handle:
+        rows = list(csv.DictReader(handle))
+    if any(not re.fullmatch(r'[a-z0-9]+', row.get('uid', '')) or not row.get('name') for row in rows):
+        raise ValueError('staff.csv needs name and lowercase alphanumeric uid columns.')
+    exclusions = folder / 'excluded_uids.txt'
+    excluded = set(exclusions.read_text().split()) if exclusions.exists() else set()
+    return [row for row in rows if row['uid'] not in excluded]
+
+
+def name_key(name):
+    text = unicodedata.normalize('NFKD', name.casefold())
+    text = ''.join(c for c in text if not unicodedata.combining(c))
+    return tuple(sorted(re.findall(r'\w+', text)))
+
+
+def recipients(papers, staff):
+    """First unambiguous eligible SLT author per paper; no online lookup."""
+    found = {}
+    for paper in papers:
+        for names, team in re.findall(r'([^()]+)\(([^)]*)\)', paper.get('author_ou', '')):
+            if not re.search(r'\bSLT\b', team, re.I):
+                continue
+            name = names.split(',')[-1].strip()
+            matches = [row for row in staff if name_key(row['name']) == name_key(name)]
+            if len(matches) == 1:
+                row = matches[0]
+                found[row['uid']] = row['uid'] + '@dfki.de'
+                break
+    return list(found.values())
 
 
 def parse_csv(text):

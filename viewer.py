@@ -14,6 +14,7 @@ class Viewer:
     def __init__(self, window, state):
         self.window, self.state = window, state
         self.data = pub.load(state)
+        self.staff = pub.load_staff(state.parent)
         window.title('SLT Colloquium · Publications')
         window.geometry('1100x760')
         window.minsize(850, 600)
@@ -51,6 +52,12 @@ class Viewer:
         ttk.Button(controls, text='Copy subject', command=lambda: self.clipboard(pub.SUBJECT)).pack(side='left')
         ttk.Button(controls, text='Mark invited', command=lambda: self.mark(True)).pack(side='right')
         ttk.Button(controls, text='Undo invited', command=lambda: self.mark(False)).pack(side='right', padx=5)
+        recipients = ttk.Frame(outer)
+        recipients.pack(fill='x', pady=(0, 8))
+        ttk.Label(recipients, text='Suggested author recipients:').pack(side='left')
+        self.addresses = tk.StringVar()
+        ttk.Entry(recipients, textvariable=self.addresses).pack(side='left', fill='x', expand=True, padx=8)
+        ttk.Button(recipients, text='Copy recipients', command=lambda: self.clipboard(self.addresses.get())).pack(side='right')
         self.text = tk.Text(outer, height=14, wrap='word', padx=10, pady=10)
         self.text.pack(fill='both', expand=True)
         self.text.configure(state='disabled')
@@ -97,6 +104,7 @@ class Viewer:
 
     def preview(self):
         papers = [self.data['papers'][key] for key in self.table.selection()]
+        self.addresses.set('; '.join(pub.recipients(papers, self.staff)))
         self.text.configure(state='normal')
         self.text.delete('1.0', 'end')
         self.text.insert('1.0', pub.invitation(papers, self.name.get()) if papers else 'Import a CSV and select one or more publications. Enter the addressee’s name, then copy the invitation into Outlook.')
