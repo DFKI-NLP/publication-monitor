@@ -5,6 +5,7 @@ from datetime import date, timedelta
 import json
 from pathlib import Path
 import tkinter as tk
+import webbrowser
 from tkinter import filedialog, messagebox, ttk
 
 import publications as pub
@@ -23,6 +24,8 @@ class Viewer:
         toolbar = ttk.Frame(outer)
         toolbar.pack(fill='x', pady=(0, 10))
         ttk.Button(toolbar, text='Import CSV…', command=self.choose_csv).pack(side='left')
+        self.open_button = ttk.Button(toolbar, text='Open publication', command=self.open_publication, state='disabled')
+        self.open_button.pack(side='left', padx=8)
         ttk.Label(toolbar, text='Search:').pack(side='left', padx=(15, 5))
         self.search = tk.StringVar()
         ttk.Entry(toolbar, textvariable=self.search, width=35).pack(side='left')
@@ -104,12 +107,18 @@ class Viewer:
 
     def preview(self):
         papers = [self.data['papers'][key] for key in self.table.selection()]
+        self.open_button.configure(state='normal' if len(papers) == 1 else 'disabled')
         self.addresses.set('; '.join(pub.recipients(papers, self.staff)))
         self.text.configure(state='normal')
         self.text.delete('1.0', 'end')
         self.text.insert('1.0', pub.invitation(papers, self.name.get()) if papers else 'Import a CSV and select one or more publications. Enter the addressee’s name, then copy the invitation into Outlook.')
         self.text.configure(state='disabled')
         self.copy_button.configure(state='normal' if papers else 'disabled')
+
+    def open_publication(self):
+        selected = self.table.selection()
+        if len(selected) == 1:
+            webbrowser.open('https://intranet.dfki.de/research/publications/showPublication?pubid=' + selected[0])
 
     def clipboard(self, text):
         self.window.clipboard_clear()

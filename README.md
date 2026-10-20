@@ -13,6 +13,7 @@ python3 viewer.py /path/to/publications.csv
 You can also open `viewer.py` without a filename and click **Import CSV**.
 
 - Publications are sorted by their intranet registration date; search by title or author.
+- Select one paper and click **Open publication** to view its intranet page in your browser. This requires DFKI intranet access; pages open only when you click.
 - The recent filter shows entries added in the last 180 days. Unknown registration dates stay visible. Missing publication years do not hide papers.
 - Select one or more papers, enter the addressee’s name, and click **Copy invitation**. Use **Copy subject** for the subject line.
 - Paste into Outlook, choose the recipient, and send manually from `colloquium-slt@dfki.de`.
