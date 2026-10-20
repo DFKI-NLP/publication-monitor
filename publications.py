@@ -43,7 +43,7 @@ def name_key(name):
     return tuple(sorted(re.findall(r'\w+', text)))
 
 
-def recipients(papers, staff):
+def matched_contacts(papers, staff):
     """First unambiguous eligible SLT author per paper; no online lookup."""
     found = {}
     for paper in papers:
@@ -54,9 +54,19 @@ def recipients(papers, staff):
             matches = [row for row in staff if name_key(row['name']) == name_key(name)]
             if len(matches) == 1:
                 row = matches[0]
-                found[row['uid']] = row['uid'] + '@dfki.de'
+                found[row['uid']] = row
                 break
     return list(found.values())
+
+
+def recipients(papers, staff):
+    return [row['uid'] + '@dfki.de' for row in matched_contacts(papers, staff)]
+
+
+def merge_papers(papers, data):
+    previous = set(data['papers']) | set(data.get('known_ids', []))
+    return dict(data, papers={**data['papers'], **papers},
+                new=sorted(set(papers) - previous, key=int) if previous else [])
 
 
 def parse_csv(text):

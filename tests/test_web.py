@@ -38,6 +38,9 @@ class WebTests(unittest.TestCase):
     def test_upload_draft_mark_update_and_persistence(self):
         status, _ = self.request('/api/import', {'csv': CSV})
         self.assertEqual(status, 200)
+        _, raw = self.request('/api/draft', {'ids': ['1']})
+        self.assertEqual(json.loads(raw)['name'], 'Example Author')
+        self.assertIn('Dear Example Author,', json.loads(raw)['body'])
         status, raw = self.request('/api/draft', {'ids': ['1'], 'name': 'Example'})
         draft = json.loads(raw)
         self.assertEqual(draft['recipients'], 'exau01@dfki.de')

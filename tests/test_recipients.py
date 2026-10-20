@@ -21,3 +21,8 @@ class RecipientTests(unittest.TestCase):
 
     def test_name_normalization(self):
         self.assertEqual(pub.name_key('Müller, Anna'), pub.name_key('Anna Muller'))
+
+    def test_names_match_recipient_ids_and_deduplicate(self):
+        staff = [{'uid': 'exau01', 'name': 'Example Author'}]
+        paper = {'author_ou': 'Example Author (SLT)'}
+        self.assertEqual(pub.matched_contacts([paper, paper], staff), staff)

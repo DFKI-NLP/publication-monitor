@@ -3,10 +3,12 @@
 import argparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import time
 from pathlib import Path
 import webbrowser
 
 import publications as pub
+import local_sources
 
 ROOT = Path(__file__).resolve().parent
 
@@ -35,6 +37,10 @@ class Handler(BaseHTTPRequestHandler):
         if not self.local_request():
             return self.reply(403, {'error': 'Local requests only.'})
         if self.path == '/api/publications':
+            try:
+                self.server.data, warnings = local_sources.refresh(self.server.state, self.server.data)
+            except (OSError, ValueError, KeyError) as exc:
+                warnings = [str(exc)]
             data = self.server.data
             papers = []
             for key, paper in data['papers'].items():
@@ -42,7 +48,7 @@ class Handler(BaseHTTPRequestHandler):
                 papers.append({k: paper.get(k, '') for k in ('id', 'title', 'author', 'creationdate')} | {
                     'date': added.isoformat() if added else '',
                     'invited': key in data['invited'], 'new': key in data['new']})
-            return self.reply(200, {'papers': papers, 'export_url': pub.EXPORT_URL})
+            return self.reply(200, {'papers': papers, 'export_url': pub.EXPORT_URL, 'warnings': warnings})
         assets = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8')}
         if self.path not in assets:
             return self.reply(404, {'error': 'Not found.'})
@@ -64,7 +70,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(body.get('csv'), str):
                     raise ValueError('Upload a CSV text file.')
                 papers = pub.parse_csv(body['csv'])
-                updated = dict(data, papers={**data['papers'], **papers}, new=sorted(set(papers) - set(data['papers']), key=int) if data['papers'] else [])
+                updated = pub.merge_papers(papers, data)
+                updated['local_csv_mtime'] = time.time_ns()
                 self.save(updated)
                 return self.reply(200, {'imported': len(papers), 'new': len(updated['new'])})
             ids = body['ids']
@@ -72,13 +79,15 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('Select existing publications.')
             if self.path == '/api/draft':
                 papers = [data['papers'][key] for key in ids]
-                name = body.get('name', '')
+                staff = pub.load_staff(self.server.state.parent)
+                names = [row['name'] for row in pub.matched_contacts(papers, staff)]
+                suggested_name = ' and '.join(names)
+                name = body.get('name', suggested_name)
                 if not isinstance(name, str):
                     raise ValueError('Name must be text.')
-                staff = pub.load_staff(self.server.state.parent)
                 addresses = pub.recipients(papers, staff)
                 missing = sum(not pub.recipients([paper], staff) for paper in papers)
-                return self.reply(200, {'body': pub.invitation(papers, name), 'subject': pub.SUBJECT, 'recipients': '; '.join(addresses), 'unmatched': missing})
+                return self.reply(200, {'name': name, 'body': pub.invitation(papers, name), 'subject': pub.SUBJECT, 'recipients': '; '.join(addresses), 'unmatched': missing})
             if self.path == '/api/mark':
                 if type(body.get('invited')) is not bool:
                     raise ValueError('Invited must be true or false.')

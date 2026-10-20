@@ -16,7 +16,7 @@ Your browser opens at **http://127.0.0.1:8765**. Keep the terminal running; pres
 
 1. Click **Download CSV from intranet** to download the SLT export in your browser (DFKI network/VPN and intranet sign-in required). Then click **Import CSV** and choose the publication CSV you exported manually. The file is processed and saved locally.
 2. Search by author/title or filter to entries added in the last 180 days. Click a publication title to open its intranet page in a new tab.
-3. Select one or more papers, enter a name, and review the suggested recipients and invitation. All draft fields can be edited; changing the selection or name regenerates the draft.
+3. Select one or more papers. The matched colleague names and recipient addresses fill in automatically. Review the invitation and edit any field as needed; changing the selection regenerates the draft, and editing the name updates its greeting.
 4. Copy recipients, subject, and invitation into Outlook. Send manually from `colloquium-slt@dfki.de`.
 5. Click **Mark invited** after sending. **Undo invited** reverses that marker; copying alone does not mark anything.
 
@@ -25,6 +25,10 @@ Imports update `data/publications.json`, preserving invited markers and previous
 For recipient suggestions, put a comma-separated `staff.csv` with `uid,name` columns in `data/`, and excluded staff UIDs in `data/excluded_uids.txt`, one per line. These private files are ignored by Git. The viewer suggests the first uniquely matched, non-excluded SLT author per paper using `uid@dfki.de`, deduplicating addresses across papers. Unmatched names require manual review. Verwalter are not included in the publication CSV.
 
 Your existing local state and roster work without conversion. With `--state /path/to/publications.json`, the roster and exclusions are read from that same folder.
+
+The page starts with saved publications, rather than an empty upload screen. On page load it checks for newer `publications*.csv` files beside the state file. Additional folders can be listed in the private `data/local_sources.json` file as `{"folders": ["/path/to/exports"]}`. Exports are processed oldest to newest, preserving invitation markers. A browser upload takes priority over older files on disk. Refresh the page to pick up a newly downloaded export.
+
+An imported historical `known_ids` list records previously seen publications, not invitations. Only confirmed invitation history should be carried into `invited`; the old seen-ID cache alone cannot establish who was emailed.
 
 ## Optional separate downloader
 
