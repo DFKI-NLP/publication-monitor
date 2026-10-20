@@ -77,9 +77,15 @@ class Handler(BaseHTTPRequestHandler):
             ids = body['ids']
             if not isinstance(ids, list) or any(not isinstance(key, str) or key not in data['papers'] for key in ids):
                 raise ValueError('Select existing publications.')
+            if self.path == '/api/drafts':
+                papers = [data['papers'][key] for key in ids]
+                staff = pub.load_staff(self.server.state.parent)
+                return self.reply(200, {'drafts': pub.invitation_groups(papers, staff)})
             if self.path == '/api/draft':
                 papers = [data['papers'][key] for key in ids]
                 staff = pub.load_staff(self.server.state.parent)
+                if len(pub.invitation_groups(papers, staff)) > 1:
+                    raise ValueError('Prepare a separate invitation for each colleague.')
                 names = [row['name'] for row in pub.matched_contacts(papers, staff)]
                 suggested_name = ' and '.join(names)
                 name = body.get('name', suggested_name)

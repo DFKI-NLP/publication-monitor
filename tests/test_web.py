@@ -64,3 +64,15 @@ class WebTests(unittest.TestCase):
         self.assertEqual(self.request('/api/import', {'csv': CSV}, headers={'Content-Type': 'application/json', 'Origin': 'https://evil.example'})[0], 403)
         self.assertEqual(self.request('/api/import', {'csv': CSV}, headers={'Content-Type': 'text/plain'})[0], 403)
         self.assertFalse(self.state.exists())
+
+    def test_separate_drafts_and_mark_only_current_recipient(self):
+        self.state.with_name('staff.csv').write_text('uid,name\nexau01,Example Author\nother01,Other Author\n')
+        csv = CSV + '2;Other paper;Other Author;Other Author (SLT);20.10.2026\n'
+        self.request('/api/import', {'csv': csv})
+        status, raw = self.request('/api/drafts', {'ids': ['1', '2']})
+        self.assertEqual(status, 200)
+        drafts = json.loads(raw)['drafts']
+        self.assertEqual([d['recipients'] for d in drafts], ['exau01@dfki.de', 'other01@dfki.de'])
+        self.assertEqual(self.request('/api/draft', {'ids': ['1', '2']})[0], 400)
+        self.request('/api/mark', {'ids': drafts[0]['ids'], 'invited': True})
+        self.assertEqual(json.loads(self.state.read_text())['invited'], ['1'])

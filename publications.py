@@ -63,6 +63,26 @@ def recipients(papers, staff):
     return [row['uid'] + '@dfki.de' for row in matched_contacts(papers, staff)]
 
 
+def invitation_groups(papers, staff):
+    groups = {}
+    for paper in papers:
+        contacts = matched_contacts([paper], staff)
+        contact = contacts[0] if contacts else None
+        key = contact['uid'] if contact else 'unmatched:' + paper['id']
+        group = groups.setdefault(key, {
+            'key': key, 'name': contact['name'] if contact else '',
+            'recipients': contact['uid'] + '@dfki.de' if contact else '',
+            'papers': [], 'ids': [], 'unmatched': not bool(contact),
+        })
+        group['papers'].append(paper)
+        group['ids'].append(paper['id'])
+    return [
+        {**{k: v for k, v in group.items() if k != 'papers'},
+         'subject': SUBJECT, 'body': invitation(group['papers'], group['name'])}
+        for group in groups.values()
+    ]
+
+
 def merge_papers(papers, data):
     previous = set(data['papers']) | set(data.get('known_ids', []))
     return dict(data, papers={**data['papers'], **papers},

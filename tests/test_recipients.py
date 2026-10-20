@@ -26,3 +26,23 @@ class RecipientTests(unittest.TestCase):
         staff = [{'uid': 'exau01', 'name': 'Example Author'}]
         paper = {'author_ou': 'Example Author (SLT)'}
         self.assertEqual(pub.matched_contacts([paper, paper], staff), staff)
+
+    def test_individual_drafts_group_only_same_colleague(self):
+        staff = [{'uid': 'al01', 'name': 'Alice Example'}, {'uid': 'bo01', 'name': 'Bob Example'}]
+        papers = [
+            {'id': '1', 'title': 'Alice first', 'author_ou': 'Alice Example (SLT)'},
+            {'id': '2', 'title': 'Bob paper', 'author_ou': 'Bob Example (SLT)'},
+            {'id': '3', 'title': 'Alice second', 'author_ou': 'Alice Example (SLT)'},
+            {'id': '4', 'title': 'Unknown first'},
+            {'id': '5', 'title': 'Unknown second'},
+        ]
+        groups = pub.invitation_groups(papers, staff)
+        self.assertEqual(len(groups), 4)
+        self.assertEqual(groups[0]['ids'], ['1', '3'])
+        self.assertEqual(groups[0]['recipients'], 'al01@dfki.de')
+        self.assertIn('Dear Alice Example,', groups[0]['body'])
+        self.assertNotIn('Bob paper', groups[0]['body'])
+        self.assertEqual(groups[1]['ids'], ['2'])
+        self.assertEqual(groups[1]['recipients'], 'bo01@dfki.de')
+        self.assertEqual(groups[2]['ids'], ['4'])
+        self.assertEqual(groups[3]['ids'], ['5'])

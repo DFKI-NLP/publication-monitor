@@ -16,13 +16,13 @@ Your browser opens at **http://127.0.0.1:8765**. Keep the terminal running; pres
 
 1. Click **Download CSV from intranet** to download the SLT export in your browser (DFKI network/VPN and intranet sign-in required). Then click **Import CSV** and choose the publication CSV you exported manually. The file is processed and saved locally.
 2. Search by author/title or filter to entries added in the last 180 days. Click a publication title to open its intranet page in a new tab.
-3. Select one or more papers. The matched colleague names and recipient addresses fill in automatically. Review the invitation and edit any field as needed; changing the selection regenerates the draft, and editing the name updates its greeting.
-4. Copy recipients, subject, and invitation into Outlook. Send manually from `colloquium-slt@dfki.de`.
-5. Click **Mark invited** after sending. **Undo invited** reverses that marker; copying alone does not mark anything.
+3. Select one or more papers. Each colleague gets a separate draft; only papers for the same colleague are grouped together. Use **Choose a colleague’s draft** to switch between them. The matched colleague name and recipient address fill in automatically. Review the invitation and edit any field as needed; changing the selection regenerates the draft, and editing the name updates its greeting.
+4. Copy the current draft’s recipient, subject, and invitation into Outlook. Repeat separately for each colleague. Send manually from `colloquium-slt@dfki.de`.
+5. Click **Mark this draft invited** after sending. This marks only the papers in that colleague’s draft. **Undo this draft** reverses those markers; copying alone does not mark anything.
 
 Imports update `data/publications.json`, preserving invited markers and previously imported papers. The first import establishes a baseline; later imports highlight newly added IDs. Invalid imports leave existing data intact. Dates refer to intranet registration, and unknown dates remain visible.
 
-For recipient suggestions, put a comma-separated `staff.csv` with `uid,name` columns in `data/`, and excluded staff UIDs in `data/excluded_uids.txt`, one per line. These private files are ignored by Git. The viewer suggests the first uniquely matched, non-excluded SLT author per paper using `uid@dfki.de`, deduplicating addresses across papers. Unmatched names require manual review. Verwalter are not included in the publication CSV.
+For recipient suggestions, put a comma-separated `staff.csv` with `uid,name` columns in `data/`, and excluded staff UIDs in `data/excluded_uids.txt`, one per line. These private files are ignored by Git. The viewer suggests the first uniquely matched, non-excluded SLT author per paper using `uid@dfki.de`, grouping papers by recipient. Unmatched papers each get their own draft for manual review. Unmatched names require manual review. Verwalter are not included in the publication CSV.
 
 Your existing local state and roster work without conversion. With `--state /path/to/publications.json`, the roster and exclusions are read from that same folder.
 
