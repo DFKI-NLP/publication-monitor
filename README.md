@@ -1,6 +1,8 @@
 # SLT colloquium publications
 
-A local webpage for reviewing publications and copying invitations into Outlook. No automatic emails or intranet lookups.
+A local webpage for reviewing publications and copying invitations into Outlook. The webpage performs no automatic emails or intranet lookups.
+
+An optional, separately deployed [scheduled monitor](automation/README.md) supports approved daily exports and automatic invitations at 20:00 Europe/Berlin.
 
 ## Start
 

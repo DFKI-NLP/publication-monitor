@@ -1,0 +1,12 @@
+[Unit]
+Description=SLT publication monitor daily at 20:00 Berlin time
+
+[Timer]
+OnCalendar=*-*-* 20:00:00 Europe/Berlin
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=colloquium-monitor.service
+
+[Install]
+WantedBy=timers.target
