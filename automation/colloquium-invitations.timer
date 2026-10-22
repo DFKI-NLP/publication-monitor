@@ -1,0 +1,12 @@
+[Unit]
+Description=Send queued SLT invitations at 09:00 Berlin time
+
+[Timer]
+OnCalendar=*-*-* 09:00:00 Europe/Berlin
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=colloquium-invitations.service
+
+[Install]
+WantedBy=timers.target

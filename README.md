@@ -2,7 +2,7 @@
 
 A local webpage for reviewing publications and copying invitations into Outlook. The webpage performs no automatic emails or intranet lookups.
 
-An optional, separately deployed [scheduled monitor](automation/README.md) supports approved daily exports and automatic invitations at 20:00 Europe/Berlin.
+An optional, separately deployed [scheduled monitor](automation/README.md) supports approved daily exports and CSV exports at 20:00 and automatic invitations at 09:00 Europe/Berlin.
 
 ## Start
 

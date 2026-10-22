@@ -1,0 +1,36 @@
+[Unit]
+Description=Send queued SLT invitations
+ConditionPathExists=/etc/colloquium-monitor/approved
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=colloquium-monitor
+Group=colloquium-monitor
+WorkingDirectory=/var/lib/colloquium-monitor
+StateDirectory=colloquium-monitor
+StateDirectoryMode=0700
+EnvironmentFile=/etc/colloquium-monitor/settings.env
+LoadCredentialEncrypted=SMTP_USER:/etc/credstore.encrypted/colloquium-monitor/SMTP_USER
+LoadCredentialEncrypted=SMTP_PASS:/etc/credstore.encrypted/colloquium-monitor/SMTP_PASS
+Environment=SMTP_USER_FILE=%d/SMTP_USER
+Environment=SMTP_PASS_FILE=%d/SMTP_PASS
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/colloquium-monitor/venv/bin/python /opt/colloquium-monitor/scheduled.py send --state /var/lib/colloquium-monitor/known_publication_ids.json
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectProc=invisible
+ProcSubset=pid
+CapabilityBoundingSet=
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+LimitCORE=0
+TimeoutStartSec=15min
